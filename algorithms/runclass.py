@@ -1,9 +1,15 @@
+
+import datasetsnc.dataclasses
+import torch.utils.data
+from datasetsnc.dataclasses import *
+from torch.utils.data import random_split
+
 # This is a class to run the training and evaluation. It is inspired in lab8. It will allow me to instance according to the needs
 # this class will implement the training and evaluation algorithms (validation and testing)
 class ImplementDLEv():
 
-    def get_data_loaders(batch_size=64, num_workers=2):
-        """Prepares data loaders for CIFAR-10 dataset.
+    def get_data_loaders(fastafile, batch_size=64,num_workers=2):
+        """Prepares data loaders .
     
         Args:
             batch_size (int): Batch size for data loading.
@@ -12,24 +18,24 @@ class ImplementDLEv():
         Returns:
             tuple: train_loader, val_loader, and test_loader (DataLoader objects).
         """
-        # Data transformations (resize, normalize)
-        transform = transforms.Compose([
-            transforms.Resize(224),  # Resizing image to 224x224 for ResNet input
-            transforms.ToTensor(),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # Normalize image with mean=0.5, std=0.5
-        ])
+       
     
-        # Load CIFAR-10 dataset
-        full_train_dataset = datasets.CIFAR10(root='./data', train=True, download=True, transform=transform)
+        # Load dataset
+        full_train_dataset = NcRnaDataset(fastafile)
     
-        # Split dataset into training and validation sets (80/20 split)
-        train_size = int(0.8 * len(full_train_dataset))
-        val_size = len(full_train_dataset) - train_size
-        train_dataset, val_dataset = random_split(full_train_dataset, [train_size, val_size])
-    
-        # Load the test dataset
-        test_dataset = datasets.CIFAR10(root='./data', train=False, download=True, transform=transform)
-    
+        
+        train_ratio = 0.7
+        val_ratio = 0.15
+        #test_ratio = 0.15
+
+        total_size = len(full_train_dataset)
+        train_size = int(train_ratio * total_size)
+        val_size = int(val_ratio * total_size)
+        test_size = total_size - train_size - val_size  
+
+        # Division du dataset
+        train_dataset, val_dataset, test_dataset = random_split(full_train_dataset, [train_size, val_size, test_size])
+
         # DataLoader for train, validation, and test datasets
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=True)
         val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=True)
@@ -37,15 +43,8 @@ class ImplementDLEv():
     
         return train_loader, val_loader, test_loader
     
-    def build_model():
-        """Builds the ResNet-34 model for CIFAR-10 classification.
-    
-        Returns:
-            model: The ResNet-34 model with modified fully connected layer.
-        """
-        model = models.resnet34(weights=None)
-        num_ftrs = model.fc.in_features  # Get the number of features in the last fully connected layer
-        model.fc = nn.Linear(num_ftrs, 10)  # Modify the fully connected layer for CIFAR-10 (10 classes)
+    def build_model(model):
+       
         model = model.to(device)  # Move model to device (GPU or CPU)
         return model
     
@@ -59,8 +58,8 @@ class ImplementDLEv():
         Returns:
             tuple: The loss function (CrossEntropyLoss), and optimizer (Adam)
         """
-        criterion = torch.nn.CrossEntropyLoss()# Loss function for classification # Your code Here. Aim for 1 line.
-        optimizer = torch.optim.Adam(model.parameters(),lr)# Adam optimizer # Your code Here. Aim for 1 line.
+        criterion = torch.nn.CrossEntropyLoss()# Loss function for classification 
+        optimizer = torch.optim.Adam(model.parameters(),lr)# Adam optimizer
         return criterion, optimizer
     
     def compute_loss(model, data, target, criterion):
@@ -75,8 +74,8 @@ class ImplementDLEv():
         Returns:
             tuple: Model output and loss value.
         """
-        output = model(data)# Forward pass # Your code Here. Aim for 1 line.
-        loss =   criterion(output,target)# Compute loss # Your code Here. Aim for 1 line.
+        output = model(data) # Forward pass 
+        loss =   criterion(output,target)# Compute loss 
         return output, loss
     
     def evaluate(loader, model, criterion, epoch, mode="Validation"):
