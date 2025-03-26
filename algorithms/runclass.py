@@ -7,18 +7,41 @@ from torch.utils.data import random_split
 # This is a class to run the training and evaluation. It is inspired in lab8. It will allow me to instance according to the needs
 # this class will implement the training and evaluation algorithms (validation and testing)
 class ImplementDLEv():
+    def __init__(self, fastafile="", batch_size=64,num_workers=2, 
+                 model = None, device="cpu"):
+                 
+        """
+        Initializes the deep learning training and evaluation class.
 
-    def get_data_loaders(fastafile, batch_size=64,num_workers=2):
+        Parameters:
+        - fastafile: 
+        - batch_size (int): Batch size for data loading.
+        - num_workers (int): Number of workers for data loading.
+        - model: The deep learning model to be trained and evaluated.
+        - device: The device to run the model on ("cpu" or "cuda").
+        """
+        self.fastafile = fastafile
+        self.batch_size = batch_size
+        self.num_workers = num_workers
+        self.model = model
+        self.device = device
+        
+        
+    
+
+        # Move model to the specified device
+        self.model.to(self.device)
+
+    def get_data_loaders():
         """Prepares data loaders .
     
-        Args:
-            batch_size (int): Batch size for data loading.
-            num_workers (int): Number of workers for data loading.
-    
+       
         Returns:
             tuple: train_loader, val_loader, and test_loader (DataLoader objects).
         """
-       
+        fastafile = self.fastafile
+        batch_size = self.batch_size
+        num_workders= self.num_workers
     
         # Load dataset
         full_train_dataset = NcRnaDataset(fastafile)
@@ -44,6 +67,8 @@ class ImplementDLEv():
         return train_loader, val_loader, test_loader
     
     def build_model(model):
+        model = self.model
+        device = self.device
        
         model = model.to(device)  # Move model to device (GPU or CPU)
         return model
@@ -154,7 +179,7 @@ class ImplementDLEv():
         return avg_train_loss, avg_batch_time
     
     def train_model(num_epochs=3, batch_size=128, lr=0.001):
-        """Main function to train the ResNet-34 model.
+        """Main function to train the model.
     
         Args:
             num_epochs (int): Number of epochs for training.
