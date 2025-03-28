@@ -5,7 +5,7 @@ import torch.nn as nn
 # A very simple linear model to test
 
 class SimpleLinear(nn.Module):
-    def __init__(self, input_size=10, num_classes=13):
+    def __init__(self, input_size=10, num_classes=14):
         super().__init__() 
         self.fc = nn.Linear(input_size, num_classes)
     

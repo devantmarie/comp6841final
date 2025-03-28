@@ -24,7 +24,8 @@ def list_y_classes_from_data(df):
 #***************************************************    
 # map the rnalabel to number
 def ncrna_map():
-    nc_map= {'5S_rRNA':1, 
+    nc_map= {'unknown':0,
+             '5S_rRNA':1, 
              '5_8S_rRNA':2, 
              'tRNA':3, 
              'ribozyme':4, 
