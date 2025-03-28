@@ -1,7 +1,6 @@
 
 import datasetsnc.dataclasses
 import torch.utils.data
-import time
 from datasetsnc.dataclasses import *
 from torch.utils.data import random_split
 
@@ -10,9 +9,7 @@ from torch.utils.data import random_split
 class ImplementDLEv():
     def __init__(self, fastafile="", batch_size=64,num_workers=2, 
                  model = None, device="cpu", train_ratio = 0.7,
-                 val_ratio = 0.15,test_ratio = 0.15,lr=0.001, num_epochs = 3,seq_length=120,
-                 subset = 0
-                 
+                 val_ratio = 0.15,test_ratio = 0.15, 
                 ):
                  
         """
@@ -33,23 +30,11 @@ class ImplementDLEv():
         self.train_ratio = train_ratio
         self.val_ratio = val_ratio
         self.test_ratio = test_ratio
-        self.lr = lr
-        self.num_epochs = num_epochs
-        self.subset = subset
-        self.seq_length = seq_length
-        
-        # variables which are feeding from methods
 
-        self.train_loader = None 
-        self.val_loader = None 
-        self.test_loader = None 
-        self.output = None 
-        self.loss = None
-        self.criterion = None
-        self.optimizer = None
-        self.data = None
-        self.target =None
+        # 
         
+    
+
         # Move model to the specified device
         self.model.to(self.device)
 
@@ -62,49 +47,43 @@ class ImplementDLEv():
         """
         fastafile = self.fastafile
         batch_size = self.batch_size
-        num_workers= self.num_workers
+        num_workders= self.num_workers
         train_ratio = self.train_ratio
         val_ratio = self.val_ratio
         test_ratio = self.test_ratio
 
-        tot_ratio=train_ratio + val_ratio+test_ratio
+        tot_ratio=train_ratio + val_ratio+test_ration
         if tot_ratio != 1:
             print(f"the data split does not sum up to 1 (or 100%):{tot_ratio}") 
     
         # Load dataset
-        full_dataset = NcRnaDataset(fastafile, self.seq_length )
+        full_train_dataset = NcRnaDataset(fastafile)
         
-        if self.subset > 0:
-            full_dataset = Subset(full_dataset,range(self.subset)) 
+       
 
-        total_size = len(full_dataset)
+        total_size = len(full_train_dataset)
         train_size = int(train_ratio * total_size)
         val_size = int(val_ratio * total_size)
         test_size = total_size - train_size - val_size  
 
         # Division du dataset
-        train_dataset, val_dataset, test_dataset = random_split(full_dataset, [train_size, val_size, test_size])
+        train_dataset, val_dataset, test_dataset = random_split(full_train_dataset, [train_size, val_size, test_size])
 
         # DataLoader for train, validation, and test datasets
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=True)
         val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=True)
         test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=True)
-
-        self.train_loader = train_loader
-        self.val_loader = val_loader
-        self.test_loader = test_loader
-        
-        return 
     
-    def build_model(self):
+        return train_loader, val_loader, test_loader
+    
+    def build_model(self,model):
         model = self.model
         device = self.device
        
         model = model.to(device)  # Move model to device (GPU or CPU)
-        self.model = model
-        return 
+        return model
     
-    def get_optimizer_and_loss(self):
+    def get_optimizer_and_loss(self,model, lr=0.001):
         """Returns the optimizer and loss function for training.
     
         Args:
@@ -114,15 +93,11 @@ class ImplementDLEv():
         Returns:
             tuple: The loss function (CrossEntropyLoss), and optimizer (Adam)
         """
-        lr = self.lr
-        model = self.model
         criterion = torch.nn.CrossEntropyLoss()# Loss function for classification 
         optimizer = torch.optim.Adam(model.parameters(),lr)# Adam optimizer
-        self.criterion = criterion
-        self.optimizer = optimizer
-        return 
+        return criterion, optimizer
     
-    def compute_loss(self):
+    def compute_loss(self, model, data, target, criterion):
         """Computes the loss.
     
         Args:
@@ -134,18 +109,11 @@ class ImplementDLEv():
         Returns:
             tuple: Model output and loss value.
         """
-        model = self.model
-        data = self.data
-        target = self.target
-        criterion = self.criterion
-        
         output = model(data) # Forward pass 
         loss =   criterion(output,target)# Compute loss 
-        self.output = output
-        self.loss = loss
-        return 
+        return output, loss
     
-    def evaluate(self,epoch,mode="Validation"):
+    def evaluate(self,loader, model, criterion, epoch, mode="Validation"):
         """Evaluates the model on the given dataset (train, val, or test).
     
         Args:
@@ -158,49 +126,39 @@ class ImplementDLEv():
         Returns:
             tuple: Average loss and accuracy for the dataset.
         """
-        #model = self.model
-        #criterion = self.criterion
-        loader = None
-        if mode == "Validation":
-            loader = self.val_loader
-        if mode == "Test":
-            loader = self.test_loader
-            
-        
-        self.model.eval()  # Set the model to evaluation mode
+        model.eval()  # Set the model to evaluation mode
         correct = 0
         total = 0
         total_loss = 0.0
     
         with torch.no_grad():  # Disable gradient computation for evaluation
             for data, target in loader:
-                self.data, self.target = data.to(self.device).float(), target.to(self.device)  # Move data to device
-                
-                self.compute_loss()  # Compute output and loss
+                data, target = data.to(device), target.to(device)  # Move data to device
+                output, loss = compute_loss(model, data, target, criterion)  # Compute output and loss
     
-                total_loss += self.loss.item()  # Accumulate loss
-                _, predicted = torch.max(self.output, 1)  # Get the predicted class
-                total += self.target.size(0)  # Number of samples
-                correct += (predicted == self.target).sum().item()  # Count correct predictions
+                total_loss += loss.item()  # Accumulate loss
+                _, predicted = torch.max(output, 1)  # Get the predicted class
+                total += target.size(0)  # Number of samples
+                correct += (predicted == target).sum().item()  # Count correct predictions
     
         # Compute average loss and accuracy
         avg_loss = total_loss / len(loader)
         accuracy = correct / total
         return avg_loss, accuracy
     
-    def run_optimizer(self):
+    def run_optimizer(self,optimizer, loss):
         """Performs and optimizer step.
     
         Args:
             optimizer: The optimizer for training.
             loss: The loss value.
         """
-        
-        self.optimizer.zero_grad()
-        self.loss.backward()
-        self.optimizer.step()
+        # Your code Here. Aim for 3 lines.
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
     
-    def train_epoch(self,epoch):
+    def train_epoch(self,model, train_loader, criterion, optimizer, epoch):
         """Performs training for a single epoch.
     
         Args:
@@ -213,31 +171,26 @@ class ImplementDLEv():
         Returns:
             tuple: Average training loss and average batch time.
         """
-        #model = self.model
-        #train_loader = self.train_loader
-        #criterion = self.criterion
-        #optimizer = self.optimizer
-        #non epoch = self.epoch
         device = self.device
         
-        self.model.train()  # Set the model to training mode
+        model.train()  # Set the model to training mode
         epoch_loss = 0.0
         batch_times = []
     
-        for batch_idx, (data, target) in enumerate(self.train_loader):
+        for batch_idx, (data, target) in enumerate(train_loader):
             start_time = time.time()  # Track batch processing time
-            self.data, self.target = data.to(device).float(), target.to(device)  # Move data to device
-            self.compute_loss()  # Compute loss
-            self.run_optimizer()  # Update weights based on loss
-            epoch_loss += self.loss.item()  # Accumulate loss
+            data, target = data.to(device), target.to(device)  # Move data to device
+            output, loss = compute_loss(model, data, target, criterion)  # Compute loss
+            run_optimizer(optimizer, loss)  # Update weights based on loss
+            epoch_loss += loss.item()  # Accumulate loss
             batch_times.append(time.time() - start_time)  # Track batch time
     
-        avg_train_loss = epoch_loss / len(self.train_loader)  # Compute average loss for the epoch
+        avg_train_loss = epoch_loss / len(train_loader)  # Compute average loss for the epoch
         avg_batch_time = sum(batch_times) / len(batch_times)  # Compute average batch time
     
         return avg_train_loss, avg_batch_time
     
-    def train_model(self):
+    def train_model(self,num_epochs=3, batch_size=128, lr=0.001):
         """Main function to train the model.
     
         Args:
@@ -248,38 +201,35 @@ class ImplementDLEv():
         Returns:
             model: The trained ResNet-34 model.
         """
-        num_epochs = self.num_epochs
-        batch_size = self.batch_size
-        lr = self.lr
         # Check for CUDA availability, and set device accordingly
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
-        self.get_data_loaders()  # Get data loaders
-        self.build_model()  # Build the model
-        self.get_optimizer_and_loss()  # Get optimizer and loss function
+        train_loader, val_loader, test_loader = get_data_loaders(batch_size)  # Get data loaders
+        model = build_model()  # Build the model
+        criterion, optimizer = get_optimizer_and_loss(model, lr)  # Get optimizer and loss function
     
         for epoch in range(num_epochs):
-            avg_train_loss, avg_batch_time = self.train_epoch(epoch)
+            avg_train_loss, avg_batch_time = train_epoch(model, train_loader, criterion, optimizer, epoch)
     
             print(f"Epoch {epoch + 1}/{num_epochs}, Loss: {avg_train_loss:.4f}, Avg Batch Time: {avg_batch_time:.4f}s")
     
             # Evaluate on validation set
-            val_loss, val_acc = self.evaluate(epoch, mode="Validation")
+            val_loss, val_acc = evaluate(val_loader, model, criterion, epoch, mode="Validation")
     
             print(f"Validation Loss: {val_loss:.4f}, Validation Accuracy: {val_acc:.4f}")
     
         # Final evaluation on test set
-        test_loss, test_acc = self.evaluate(num_epochs, mode="Test")
+        test_loss, test_acc = evaluate(test_loader, model, criterion, num_epochs, mode="Test")
         print(f"Final Test Accuracy: {test_acc:.4f}")
     
-        return   
+        return model  # Return the trained model
 
     
     
     def run_train(self):
-        model = self.train_model()
+        model = train_model()
         self.model = model 
-        return
+        return(model)
 
 
     
