@@ -239,14 +239,7 @@ class ImplementDLEv():
     
     def train_model(self):
         """Main function to train the model.
-    
-        Args:
-            num_epochs (int): Number of epochs for training.
-            batch_size (int): Batch size for data loading.
-            lr (float): Learning rate for the optimizer.
-    
-        Returns:
-            model: The trained ResNet-34 model.
+       
         """
         num_epochs = self.num_epochs
         batch_size = self.batch_size

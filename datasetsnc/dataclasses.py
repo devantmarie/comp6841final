@@ -1,6 +1,7 @@
 import pandas as pd
 import torch
 import torch.nn.functional as F
+import matplotlib.pyplot as plt
 from Bio import SeqIO
 from torch.utils.data import Dataset, Subset
 from torch.nn.utils.rnn import pad_sequence
@@ -56,12 +57,38 @@ def sequence_to_onehot(sequence):
     return torch.tensor(onehot)
     
 #***************************************************
+#Histogram of Non-Coding RNA by Class
+def hist_plot_ncrna_class(df):
+    class_counts = df['ylabel'].value_counts()
+    plt.figure(figsize=(10, 6))
+    class_counts.plot(kind='bar', color='skyblue', edgecolor='black')
+    plt.xlabel("ncRNA Class")
+    plt.ylabel("Count")
+    plt.title("Histogram of Non-Coding RNA by Class")
+    plt.xticks(rotation=45, ha='right')
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+    plt.show()
+    return plt
+#***************************************************
+# Distribution of Sequence Lengths
+def dist_seq_lenghts(df):
+    plt.figure(figsize=(10, 6))
+    plt.hist(df['real_sequence_length'], bins=30, color='lightcoral', edgecolor='black', alpha=0.7)
+    plt.xlabel("Sequence Length")
+    plt.ylabel("Frequency")
+    plt.title("Distribution of ncRNA Sequence Lengths")
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+    plt.show()
+    return plt
+
+#***************************************************
 
 class NcRnaDataset(Dataset):
     def __init__(self,fastaFile,seq_length=120):
         self.nc_map, self.nc_map_rev = ncrna_map()
         self.ncdf = read_fasta_file(fastaFile)
         self.ncdf["y"] = self.ncdf["ylabel"].map(self.nc_map) 
+        self.ncdf['real_sequence_length'] = self.ncdf['sequence'].apply(len)
         self.seq_length = seq_length
         
     def __len__(self):
@@ -78,9 +105,9 @@ class NcRnaDataset(Dataset):
         # Truncate or pad the sequence to the fixed length (max_length)
         seq_len = nconehot.shape[0]
         
-        # Truncate if longer than max_length
+        # Truncate if longer than seq_length
         if seq_len > self.seq_length:
-            nconehot = nconehot[:self.seq_length, :]  # Truncate to max_length
+            nconehot = nconehot[:self.seq_length, :]  # Truncate to seq_length
         
         # Pad if shorter than max_length
         elif seq_len < self.seq_length:
@@ -88,6 +115,12 @@ class NcRnaDataset(Dataset):
             nconehot = F.pad(nconehot, (0, 0, 0, padding), value=0)  
 
         return nconehot
+
+    def hist_nc_class(self):
+        return hist_plot_ncrna_class(self.ncdf)
+
+    def dist_nc_len(self):
+        return dist_seq_lenghts(self.ncdf)
 
 
 #****************************************************
@@ -119,4 +152,5 @@ def collate_fn(batch):
    
     return list(zip(niseq,ys))
 #******************************************************
+
 
