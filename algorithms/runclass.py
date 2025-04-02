@@ -4,6 +4,8 @@ import torch.utils.data
 import time
 from datasetsnc.dataclasses import *
 from torch.utils.data import random_split
+from datetime import datetime
+
 
 # This is a class to run the training and evaluation. It is inspired in lab8. It will allow me to instance according to the needs
 # this class will implement the training and evaluation algorithms (validation and testing)
@@ -11,7 +13,7 @@ class ImplementDLEv():
     def __init__(self, fastafile="", batch_size=64,num_workers=2, 
                  model = None, device="cpu", train_ratio = 0.7,
                  val_ratio = 0.15,test_ratio = 0.15,lr=0.001, num_epochs = 3,seq_length=120,
-                 subset = 0
+                 subset = 0, chkpoint=False, chkpath = ""
                  
                 ):
                  
@@ -37,6 +39,8 @@ class ImplementDLEv():
         self.num_epochs = num_epochs
         self.subset = subset
         self.seq_length = seq_length
+        self.chkpoint = chkpoint
+        self.chkpath = chkpath
         
         # variables which are feeding from methods
 
@@ -49,17 +53,15 @@ class ImplementDLEv():
         self.optimizer = None
         self.data = None
         self.target =None
+        self.class_accuracy = None
         
         # Move model to the specified device
         self.model.to(self.device)
 
+    #*************************************************
+    
     def get_data_loaders(self):
-        """Prepares data loaders .
-           note: the test_ratio is calculated by different and it is only required to check  
        
-        Returns:
-            tuple: train_loader, val_loader, and test_loader (DataLoader objects).
-        """
         fastafile = self.fastafile
         batch_size = self.batch_size
         num_workers= self.num_workers
@@ -95,6 +97,8 @@ class ImplementDLEv():
         self.test_loader = test_loader
         
         return 
+
+    #*************************************************
     
     def build_model(self):
         model = self.model
@@ -104,16 +108,10 @@ class ImplementDLEv():
         self.model = model
         return 
     
+    #*************************************************
+    
     def get_optimizer_and_loss(self):
-        """Returns the optimizer and loss function for training.
-    
-        Args:
-            model: The neural network model.
-            lr (float): Learning rate for the optimizer.
-    
-        Returns:
-            tuple: The loss function (CrossEntropyLoss), and optimizer (Adam)
-        """
+        
         lr = self.lr
         model = self.model
         criterion = torch.nn.CrossEntropyLoss()# Loss function for classification 
@@ -122,18 +120,10 @@ class ImplementDLEv():
         self.optimizer = optimizer
         return 
     
+    #*************************************************
+    
     def compute_loss(self):
-        """Computes the loss.
-    
-        Args:
-            model: The neural network model.
-            data: The input data (images).
-            target: The ground truth labels.
-            criterion: The loss function.
-    
-        Returns:
-            tuple: Model output and loss value.
-        """
+       
         model = self.model
         data = self.data
         target = self.target
@@ -145,21 +135,10 @@ class ImplementDLEv():
         self.loss = loss
         return 
     
+    #*************************************************
+    
     def evaluate(self,epoch,mode="Validation"):
-        """Evaluates the model on the given dataset (train, val, or test).
-    
-        Args:
-            loader: DataLoader object for the dataset.
-            model: The trained model.
-            criterion: The loss function.
-            epoch: The current epoch number.
-            mode (str): Mode of evaluation (e.g., "Validation", "Test").
-    
-        Returns:
-            tuple: Average loss and accuracy for the dataset.
-        """
-        #model = self.model
-        #criterion = self.criterion
+      
         loader = None
         if mode == "Validation":
             loader = self.val_loader
@@ -171,6 +150,10 @@ class ImplementDLEv():
         correct = 0
         total = 0
         total_loss = 0.0
+
+        class_correct = [0] * self.model.num_classes  
+        class_total = [0] * self.model.num_classes  
+    
     
         with torch.no_grad():  # Disable gradient computation for evaluation
             for data, target in loader:
@@ -182,42 +165,37 @@ class ImplementDLEv():
                 _, predicted = torch.max(self.output, 1)  # Get the predicted class
                 total += self.target.size(0)  # Number of samples
                 correct += (predicted == self.target).sum().item()  # Count correct predictions
+
+                 # Update class-wise correct and total counts
+                for i in range(self.target.size(0)):  # Iterate over each sample
+                    label = self.target[i].item()
+                    class_total[label] += 1
+                    if predicted[i].item() == label:
+                        class_correct[label] += 1
+
     
         # Compute average loss and accuracy
         avg_loss = total_loss / len(loader)
         accuracy = correct / total
+        
+        # Compute accuracy per class
+        self.class_accuracy = [correct / total if total > 0 else 0 for correct, total in zip(class_correct, class_total)]
+        self.class_accuracy = [round(nnn, 3) for nnn in self.class_accuracy]
+    
+        
         return avg_loss, accuracy
     
-    def run_optimizer(self):
-        """Performs and optimizer step.
+    #*************************************************
     
-        Args:
-            optimizer: The optimizer for training.
-            loss: The loss value.
-        """
-        
+    def run_optimizer(self):
+    
         self.optimizer.zero_grad()
         self.loss.backward()
         self.optimizer.step()
+
+    #*************************************************    
     
     def train_epoch(self,epoch):
-        """Performs training for a single epoch.
-    
-        Args:
-            model: The neural network model.
-            train_loader: DataLoader for the training dataset.
-            criterion: The loss function.
-            optimizer: The optimizer for training.
-            epoch (int): Current epoch number.
-    
-        Returns:
-            tuple: Average training loss and average batch time.
-        """
-        #model = self.model
-        #train_loader = self.train_loader
-        #criterion = self.criterion
-        #optimizer = self.optimizer
-        #non epoch = self.epoch
         device = self.device
         
         self.model.train()  # Set the model to training mode
@@ -237,15 +215,14 @@ class ImplementDLEv():
     
         return avg_train_loss, avg_batch_time
     
+    #*************************************************
+    
     def train_model(self):
-        """Main function to train the model.
-       
-        """
+     
         num_epochs = self.num_epochs
         batch_size = self.batch_size
         lr = self.lr
-        # Check for CUDA availability, and set device accordingly
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    
     
         self.get_data_loaders()  # Get data loaders
         self.build_model()  # Build the model
@@ -253,26 +230,52 @@ class ImplementDLEv():
     
         for epoch in range(num_epochs):
             avg_train_loss, avg_batch_time = self.train_epoch(epoch)
-    
+            
+            if self.chkpoint:
+                self.checkpointev(epoch)
+            
             print(f"Epoch {epoch + 1}/{num_epochs}, Loss: {avg_train_loss:.4f}, Avg Batch Time: {avg_batch_time:.4f}s")
     
             # Evaluate on validation set
             val_loss, val_acc = self.evaluate(epoch, mode="Validation")
     
             print(f"Validation Loss: {val_loss:.4f}, Validation Accuracy: {val_acc:.4f}")
+            print(f"Validation Class Accuracy:  {self.class_accuracy}")
     
         # Final evaluation on test set
         test_loss, test_acc = self.evaluate(num_epochs, mode="Test")
         print(f"Final Test Accuracy: {test_acc:.4f}")
+        print(f"Final Test Class Accuracy:  {self.class_accuracy} ")         
     
         return   
 
-    
+    #*************************************************
     
     def run_train(self):
         model = self.train_model()
         self.model = model 
         return
+
+    #*************************************************
+
+    def checkpointev(self,epoch):
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': self.model.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
+            'criterion': self.criterion,
+            'loss': self.loss,
+            'batch_size': self.batch_size,
+               
+        },
+        (f"{self.chkpath}checkpoint_{self.model.getModelName()}_"
+         f"{epoch}_{self.batch_size}_{self.optimizer.param_groups[0]['lr']}_"
+         f"{timestamp}.pth")
+    )
+         
+
+
 
 
     
