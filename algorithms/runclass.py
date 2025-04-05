@@ -151,7 +151,7 @@ class ImplementDLEv():
             loader = self.test_loader
             
         
-        self.model.eval()  # Set the model to evaluation mode
+        self.model.eval()  
         correct = 0
         total = 0
         total_loss = 0.0
@@ -160,19 +160,19 @@ class ImplementDLEv():
         class_total = [0] * self.model.num_classes  
     
     
-        with torch.no_grad():  # Disable gradient computation for evaluation
+        with torch.no_grad():  
             for data, target in loader:
-                self.data, self.target = data.to(self.device).float(), target.to(self.device)  # Move data to device
+                self.data, self.target = data.to(self.device).float(), target.to(self.device)  
                 
-                self.compute_loss()  # Compute output and loss
+                self.compute_loss()  
     
-                total_loss += self.loss.item()  # Accumulate loss
-                _, predicted = torch.max(self.output, 1)  # Get the predicted class
-                total += self.target.size(0)  # Number of samples
-                correct += (predicted == self.target).sum().item()  # Count correct predictions
+                total_loss += self.loss.item()  
+                _, predicted = torch.max(self.output, 1)  
+                total += self.target.size(0)  
+                correct += (predicted == self.target).sum().item()  
 
                  # Update class-wise correct and total counts
-                for i in range(self.target.size(0)):  # Iterate over each sample
+                for i in range(self.target.size(0)):  
                     label = self.target[i].item()
                     class_total[label] += 1
                     if predicted[i].item() == label:
@@ -203,20 +203,20 @@ class ImplementDLEv():
     def train_epoch(self,epoch):
         device = self.device
         
-        self.model.train()  # Set the model to training mode
+        self.model.train() 
         epoch_loss = 0.0
         batch_times = []
     
         for batch_idx, (data, target) in enumerate(self.train_loader):
-            start_time = time.time()  # Track batch processing time
-            self.data, self.target = data.to(device).float(), target.to(device)  # Move data to device
-            self.compute_loss()  # Compute loss
-            self.run_optimizer()  # Update weights based on loss
-            epoch_loss += self.loss.item()  # Accumulate loss
-            batch_times.append(time.time() - start_time)  # Track batch time
+            start_time = time.time()  
+            self.data, self.target = data.to(device).float(), target.to(device)  
+            self.compute_loss()  
+            self.run_optimizer() 
+            epoch_loss += self.loss.item() 
+            batch_times.append(time.time() - start_time)  
     
-        avg_train_loss = epoch_loss / len(self.train_loader)  # Compute average loss for the epoch
-        avg_batch_time = sum(batch_times) / len(batch_times)  # Compute average batch time
+        avg_train_loss = epoch_loss / len(self.train_loader)
+        avg_batch_time = sum(batch_times) / len(batch_times)  
     
         return avg_train_loss, avg_batch_time
     
@@ -293,7 +293,7 @@ class ImplementDLEv():
         plt.legend(['Train Loss','Validation Loss'])
         plt.title(title)
         plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
-        plt.show()
+        #plt.show()
 
 
     #************************************************
@@ -301,13 +301,13 @@ class ImplementDLEv():
     def accuracy_x_class_plot(self,title="Per-Class Accuracy (Test Dataset)"):
         num_ncrna_class = len(self.class_accuracy)
         classes_ncrna = list(range(num_ncrna_class))  
-        plt.bar(classes_ncrna, self.class_accuracy, color='teal')
+        plt.bar(classes_ncrna, self.class_accuracy, color='purple')
         plt.xlabel('Class')
         plt.ylabel('Accuracy')
         plt.title(title)
         plt.ylim(0, 1.05) 
         plt.xticks(classes_ncrna) 
-        plt.show()
+        #plt.show()
 
     #*********************************************
 
@@ -321,6 +321,16 @@ class ImplementDLEv():
         print()
         return
 
+    #*********************************************
+
+    def perform_accuracy_gether(self):
+        plt.figure(figsize=(12, 6))
+        plt.subplot(1, 2, 1)  # (rows, cols, index)
+        self.performance_plot()  # Your existing function
+        plt.subplot(1, 2, 2)  # (rows, cols, index)
+        self.accuracy_x_class_plot() # Your existing function
+        plt.tight_layout()  
+        plt.show()
     
     
 
