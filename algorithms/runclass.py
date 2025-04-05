@@ -15,7 +15,7 @@ class ImplementDLEv():
     def __init__(self, fastafile="", batch_size=64,num_workers=2, 
                  model = None, device="cpu", train_ratio = 0.7,
                  val_ratio = 0.15,test_ratio = 0.15,lr=0.001, num_epochs = 3,seq_length=120,
-                 subset = 0, chkpoint=False, chkpath = ""
+                 subset = 0, chkpoint=False, chkpath = "",random_rev_compl_transform_prob = 0
                  
                 ):
                  
@@ -43,6 +43,7 @@ class ImplementDLEv():
         self.seq_length = seq_length
         self.chkpoint = chkpoint
         self.chkpath = chkpath
+        self.random_rev_compl_transform_prob = random_rev_compl_transform_prob
         
         # variables which are feeding from methods
 
@@ -78,7 +79,7 @@ class ImplementDLEv():
             print(f"the data split does not sum up to 1 (or 100%):{tot_ratio}") 
     
         # Load dataset
-        full_dataset = NcRnaDataset(fastafile, self.seq_length )
+        full_dataset = NcRnaDataset(fastafile, self.seq_length, self.random_rev_compl_transform_prob)
         
         if self.subset > 0:
             full_dataset = Subset(full_dataset,range(self.subset)) 

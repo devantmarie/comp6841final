@@ -2,6 +2,7 @@ import pandas as pd
 import torch
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
+import random 
 from Bio import SeqIO
 from torch.utils.data import Dataset, Subset
 from torch.nn.utils.rnn import pad_sequence
@@ -43,7 +44,8 @@ def ncrna_map():
     nc_map_rev = {v: k for k, v in nc_map.items()}
     return nc_map,nc_map_rev
 #***************************************************
-# convert from sequecent to one hot.In case of 
+# Converts an RNA sequence string to one-hot encoding. Invalid nucleotides (e.g., N, Y, R, etc.) 
+# are encoded as [0, 0, 0, 0].
 
 def sequence_to_onehot(sequence):
     ncl_index =  {'A':0,'T':1,'G':2,'C':3}  
@@ -83,19 +85,49 @@ def dist_seq_lenghts(df):
 
 #***************************************************
 
+def reverse_complement(rna_sequence):
+    complement_base= {
+        'A': 'T',
+        'T': 'A',
+        'C': 'G',
+        'G': 'C',
+        'N': 'N',  # Undetermined base 
+        'R': 'Y',  # Purine (A or G)
+        'Y': 'R',  # Pyrimidine (C or T)
+        'S': 'S',  # (G or C)
+        'W': 'W',  # (A or T)
+        'K': 'M',  # (G or T)
+        'M': 'K',  # (A or C)
+        'B': 'V',  # (C, G, or T)
+        'D': 'H',  # (A, G, or T)
+        'H': 'D',  # (A, C, or T)
+        'V': 'B',  # (A, C, or G)
+        'X': 'X'   # Unknown base
+                
+    }
+    complement = ''.join([complement_base[base] for base in rna_sequence])
+    reverse_complement = complement[::-1]
+    return reverse_complement
+
+#*************************************************
+
 class NcRnaDataset(Dataset):
-    def __init__(self,fastaFile,seq_length=120):
+    def __init__(self,fastaFile,seq_length=120,random_rev_compl_transform_prob = 0):
         self.nc_map, self.nc_map_rev = ncrna_map()
         self.ncdf = read_fasta_file(fastaFile)
         self.ncdf["y"] = self.ncdf["ylabel"].map(self.nc_map) 
         self.ncdf['real_sequence_length'] = self.ncdf['sequence'].apply(len)
         self.seq_length = seq_length
+        self.random_rev_compl_transform_prob = random_rev_compl_transform_prob
         
     def __len__(self):
         return len(self.ncdf)
 
     def __getitem__(self, idx):
-        ncrna_onehot_a_seq = sequence_to_onehot(self.ncdf.iloc[idx]['sequence']) 
+        ncrna_seq = self.ncdf.iloc[idx]['sequence']
+        if random.random() <  self.random_rev_compl_transform_prob:
+             ncrna_seq = reverse_complement(ncrna_seq)
+        ncrna_onehot_a_seq = sequence_to_onehot(ncrna_seq) 
         label = self.ncdf.iloc[idx]['y']
         if self.seq_length !=0:
             ncrna_onehot_a_seq= self.resize_seqncr(ncrna_onehot_a_seq)
