@@ -2,9 +2,11 @@
 import datasetsnc.dataclasses
 import torch.utils.data
 import time
+import inspect
 from datasetsnc.dataclasses import *
 from torch.utils.data import random_split
 from datetime import datetime
+from matplotlib.ticker import MaxNLocator
 
 
 # This is a class to run the training and evaluation. It is inspired in lab8. It will allow me to instance according to the needs
@@ -54,6 +56,8 @@ class ImplementDLEv():
         self.data = None
         self.target =None
         self.class_accuracy = None
+        self.acum_train_loss = []
+        self.acum_val_loss = []
         
         # Move model to the specified device
         self.model.to(self.device)
@@ -218,15 +222,18 @@ class ImplementDLEv():
     #*************************************************
     
     def train_model(self):
-     
+        print()
+        print("Run Information")
+        print("---------------")
+        
         num_epochs = self.num_epochs
         batch_size = self.batch_size
         lr = self.lr
     
     
-        self.get_data_loaders()  # Get data loaders
-        self.build_model()  # Build the model
-        self.get_optimizer_and_loss()  # Get optimizer and loss function
+        self.get_data_loaders()  
+        self.build_model()  
+        self.get_optimizer_and_loss()
     
         for epoch in range(num_epochs):
             avg_train_loss, avg_batch_time = self.train_epoch(epoch)
@@ -236,17 +243,18 @@ class ImplementDLEv():
             
             print(f"Epoch {epoch + 1}/{num_epochs}, Loss: {avg_train_loss:.4f}, Avg Batch Time: {avg_batch_time:.4f}s")
     
-            # Evaluate on validation set
             val_loss, val_acc = self.evaluate(epoch, mode="Validation")
     
             print(f"Validation Loss: {val_loss:.4f}, Validation Accuracy: {val_acc:.4f}")
             print(f"Validation Class Accuracy:  {self.class_accuracy}")
-    
-        # Final evaluation on test set
+            
+            self.acum_train_loss.append(avg_train_loss)
+            self.acum_val_loss.append(val_loss)
+        
         test_loss, test_acc = self.evaluate(num_epochs, mode="Test")
         print(f"Final Test Accuracy: {test_acc:.4f}")
         print(f"Final Test Class Accuracy:  {self.class_accuracy} ")         
-    
+        print ()
         return   
 
     #*************************************************
@@ -274,8 +282,46 @@ class ImplementDLEv():
          f"{timestamp}.pth")
     )
          
+    #*************************************************
+    # Plot performance
+    def performance_plot(self,title="Model Performance: Training vs Validation Loss"):
+        plt.plot(self.acum_train_loss, color='green', linestyle='--')
+        plt.plot(self.acum_val_loss, color='orange', linestyle='--')
+        plt.xlabel('epochs')
+        plt.ylabel('loss')
+        plt.legend(['Train Loss','Validation Loss'])
+        plt.title(title)
+        plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
+        plt.show()
 
 
+    #************************************************
+    # Accuracy x class
+    def accuracy_x_class_plot(self,title="Per-Class Accuracy (Test Dataset)"):
+        num_ncrna_class = len(self.class_accuracy)
+        classes_ncrna = list(range(num_ncrna_class))  
+        plt.bar(classes_ncrna, self.class_accuracy, color='teal')
+        plt.xlabel('Class')
+        plt.ylabel('Accuracy')
+        plt.title(title)
+        plt.ylim(0, 1.05) 
+        plt.xticks(classes_ncrna) 
+        plt.show()
+
+    #*********************************************
+
+    def print_settings(self):
+        init_settings = inspect.signature(self.__init__).parameters
+        class_settings = "\n".join([f"{param}: {getattr(self, param)}" for param in init_settings if param != 'self'])
+        print("************************************************")
+        print("Model Hyperparameters and Configuration Settings")
+        print("------------------------------------------------")
+        print(class_settings)
+        print()
+        return
+
+    
+    
 
 
     
