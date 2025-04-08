@@ -112,9 +112,15 @@ def reverse_complement(rna_sequence):
 #*************************************************
 
 class NcRnaDataset(Dataset):
-    def __init__(self,fastaFile,seq_length=120,random_rev_compl_transform_prob = 0):
+    def __init__(self,fastaFile,seq_length=120,random_rev_compl_transform_prob = 0,fastaFile2=None, fastaFile3=None):
         self.nc_map, self.nc_map_rev = ncrna_map()
         self.ncdf = read_fasta_file(fastaFile)
+        if fastaFile2 is not None:
+            ncdf2 = read_fasta_file(fastaFile2)
+            self.ncdf = pd.concat([self.ncdf,ncdf2],ignore_index=True)
+        if fastaFile3 is not None:
+            ncdf3 = read_fasta_file(fastaFile3)
+            self.ncdf = pd.concat([self.ncdf,ncdf3],ignore_index=True)
         self.ncdf["y"] = self.ncdf["ylabel"].map(self.nc_map) 
         self.ncdf['real_sequence_length'] = self.ncdf['sequence'].apply(len)
         self.seq_length = seq_length
