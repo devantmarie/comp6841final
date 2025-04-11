@@ -9,9 +9,15 @@ from datetime import datetime
 from matplotlib.ticker import MaxNLocator
 
 
-# This is a class to run the training and evaluation. It is inspired in lab8. It will allow me to instance according to the needs
-# this class will implement the training and evaluation algorithms (validation and testing)
+#*********************************************************************************
+#*
 class ImplementDLEv():
+    """
+     This class handles training, evaluation, and testing procedures.
+     Its structure is inspired by Lab 8 and is designed to support inheritance and method overriding,
+     making it flexible and adaptable for different models and types of bioinformatics data.
+     It provides implementations for training, validation, and testing workflows.
+    """
     def __init__(self, fastafile="", batch_size=64,num_workers=2, 
                  model = None, device="cpu", train_ratio = 0.7,
                  val_ratio = 0.15,test_ratio = 0.15,lr=0.001, num_epochs = 3,seq_length=120,
@@ -21,14 +27,29 @@ class ImplementDLEv():
                 ):
                  
         """
-        Initializes the deep learning training and evaluation class.
+        Initializes the deep learning training, evaluation, and testing class.
+
+        This class manages the end-to-end pipeline for training, validating, and testing deep learning models 
+        on biological sequence data. It is designed to be flexible and extendable for various models and datasets.
 
         Parameters:
-        - fastafile: 
-        - batch_size (int): Batch size for data loading.
-        - num_workers (int): Number of workers for data loading.
-        - model: The deep learning model to be trained and evaluated.
-        - device: The device to run the model on ("cpu" or "cuda").
+            - fastafile (str): Path to the primary FASTA file containing sequence data.
+            - batch_size (int): Batch size for data loading.
+            - num_workers (int): Number of worker threads for parallel data loading.
+            - model (nn.Module): The deep learning model to be trained and evaluated.
+            - device (str): Device to run the model on ("cpu" or "cuda").
+            - train_ratio (float): Proportion of the dataset to use for training.
+            - val_ratio (float): Proportion of the dataset to use for validation.
+            - test_ratio (float): Proportion of the dataset to use for testing.
+            - lr (float): Learning rate for the optimizer.
+            - num_epochs (int): Number of training epochs.
+            - seq_length (int): Length of input sequences to consider.
+            - subset (int): If greater than 0, limits the dataset to the specified number of samples for quick testing.
+            - chkpoint (bool): Whether to enable model checkpointing.
+            - chkpath (str): Path to save or load model checkpoints.
+            - random_rev_compl_transform_prob (float): Probability of applying reverse complement transformation as data augmentation.
+            - fastaFile2 (str or None): Optional second FASTA file for multi-source data training.
+            - fastaFile3 (str or None): Optional third FASTA file for multi-source data training.
         """
         self.fastafile = fastafile
         self.batch_size = batch_size
@@ -49,7 +70,6 @@ class ImplementDLEv():
         self.fastaFile3 = fastaFile3            
         
         # variables which are feeding from methods
-
         self.train_loader = None 
         self.val_loader = None 
         self.test_loader = None 
@@ -81,7 +101,7 @@ class ImplementDLEv():
         if tot_ratio != 1:
             print(f"the data split does not sum up to 1 (or 100%):{tot_ratio}") 
     
-        # Load dataset
+     
         full_dataset = NcRnaDataset(fastafile, self.seq_length, self.random_rev_compl_transform_prob,  self.fastaFile2, self.fastaFile3)
         
         if self.subset > 0:
@@ -92,11 +112,7 @@ class ImplementDLEv():
         train_size = int(train_ratio * total_size)
         val_size = int(val_ratio * total_size)
         test_size = total_size - train_size - val_size  
-
-        # Division du dataset
         train_dataset, val_dataset, test_dataset = random_split(full_dataset, [train_size, val_size, test_size])
-
-        # DataLoader for train, validation, and test datasets
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=True)
         val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=True)
         test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=True)
@@ -112,8 +128,7 @@ class ImplementDLEv():
     def build_model(self):
         model = self.model
         device = self.device
-       
-        model = model.to(device)  # Move model to device (GPU or CPU)
+        model = model.to(device)
         self.model = model
         return 
     
@@ -123,8 +138,8 @@ class ImplementDLEv():
         
         lr = self.lr
         model = self.model
-        criterion = torch.nn.CrossEntropyLoss()# Loss function for classification 
-        optimizer = torch.optim.Adam(model.parameters(),lr)# Adam optimizer
+        criterion = torch.nn.CrossEntropyLoss()
+        optimizer = torch.optim.Adam(model.parameters(),lr)
         self.criterion = criterion
         self.optimizer = optimizer
         return 
@@ -137,9 +152,8 @@ class ImplementDLEv():
         data = self.data
         target = self.target
         criterion = self.criterion
-        
-        output = model(data) # Forward pass 
-        loss =   criterion(output,target)# Compute loss 
+        output = model(data) 
+        loss =   criterion(output,target)
         self.output = output
         self.loss = loss
         return 
@@ -175,7 +189,7 @@ class ImplementDLEv():
                 total += self.target.size(0)  
                 correct += (predicted == self.target).sum().item()  
 
-                 # Update class-wise correct and total counts
+                
                 for i in range(self.target.size(0)):  
                     label = self.target[i].item()
                     class_total[label] += 1
@@ -183,11 +197,11 @@ class ImplementDLEv():
                         class_correct[label] += 1
 
     
-        # Compute average loss and accuracy
+       
         avg_loss = total_loss / len(loader)
         accuracy = correct / total
         
-        # Compute accuracy per class
+        
         self.class_accuracy = [correct / total if total > 0 else 0 for correct, total in zip(class_correct, class_total)]
         self.class_accuracy = [round(nnn, 3) for nnn in self.class_accuracy]
     
@@ -288,7 +302,7 @@ class ImplementDLEv():
     )
          
     #*************************************************
-    # Plot performance
+    # 
     def performance_plot(self,title="Model Performance: Training vs Validation Loss"):
         plt.plot(self.acum_train_loss, color='green', linestyle='--')
         plt.plot(self.acum_val_loss, color='orange', linestyle='--')
@@ -301,7 +315,7 @@ class ImplementDLEv():
 
 
     #************************************************
-    # Accuracy x class
+    
     def accuracy_x_class_plot(self,title="Per-Class Accuracy (Test Dataset)"):
         num_ncrna_class = len(self.class_accuracy)
         classes_ncrna = list(range(num_ncrna_class))  
