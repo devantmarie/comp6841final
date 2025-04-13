@@ -79,13 +79,13 @@ def sequence_to_onehot(sequence):
 #***************************************************
 #
 def hist_plot_ncrna_class(df):
-        """
-        Displays a histogram of ncRNA class distribution from the given DataFrame.
-        Parameters:
-            df (pandas.DataFrame): DataFrame containing a 'ylabel' column with ncRNA class labels.
-        Returns:
-            matplotlib.pyplot: The plot object for further customization if needed.
-        """
+    """
+    Displays a histogram of ncRNA class distribution from the given DataFrame.
+    Parameters:
+        df (pandas.DataFrame): DataFrame containing a 'ylabel' column with ncRNA class labels.
+    Returns:
+        matplotlib.pyplot: The plot object for further customization if needed.
+    """
     class_counts = df['ylabel'].value_counts()
     plt.figure(figsize=(10, 6))
     class_counts.plot(kind='bar', color='skyblue', edgecolor='black')

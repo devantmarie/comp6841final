@@ -84,9 +84,9 @@ class CombineCNN1(nn.Module):
 #********************************************
 #
 class RnnLSTM(nn.Module):
-     """
-      An LSTM-based model for the classification of non-coding RNAs.
-      This model uses a Long Short-Term Memory (LSTM) network to capture sequential dependencies in ncRNA sequences. 
+    """
+    An LSTM-based model for the classification of non-coding RNAs.
+    This model uses a Long Short-Term Memory (LSTM) network to capture sequential dependencies in ncRNA sequences. 
     """    
     
     def __init__(self, input_size=10, hidden_size=128, num_classes=14):

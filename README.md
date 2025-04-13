@@ -1,4 +1,4 @@
-# RNA Sequence Classification with Deep Learning
+# Exploring and Enhancing Non-Coding RNA Family Identification and Annotation Using Deep Learning on Primary Structure
 
 This project implements a deep learning pipeline for classifying RNA sequences, with a focus on non-coding RNAs (ncRNAs). The pipeline handles multiple aspects of the machine learning workflow, including dataset preparation, model training, evaluation, and testing, all tailored to bioinformatics applications. 
 
@@ -30,7 +30,7 @@ pip install torch torchvision torchaudio
 ```
 ## Usage
 
-For detailed instructions and code examples, check the notebook `Project_emilio_Vello.ipynb`.
+For detailed instructions and code examples, check the notebook `Project_emilio_vello.ipynb`.
 
 ## Dataset Source
 
