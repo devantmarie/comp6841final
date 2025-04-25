@@ -16,6 +16,7 @@ The system supports various transformations, such as reverse complement augmenta
 
 - **Dataset Class**: `NcRnaDataset` class for managing RNA sequence data, supporting sequence encoding and data transformations.
 - **Training & Evaluation Class**: `ImplementDLEv` class for handling model training, evaluation, and testing.
+- **Model Class**: 'SimpleLinear', 'SimpleMLP','CombineCNN1','RnnLSTM'and 'Transformer' each representing a different neural network architecture.
 - **Helper Functions**: Utility functions for sequence encoding (e.g., one-hot encoding) and performance plotting.
 
 ## Installation
